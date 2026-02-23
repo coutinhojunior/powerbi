@@ -56,17 +56,17 @@
   /* CONFIG KEY */
   #pbi-ai-config{
     padding:12px 14px;background:#fffbeb;border-bottom:1px solid #fde68a;
-    display:flex;gap:8px;align-items:center;
+    display:flex;gap:8px;align-items:center;flex-wrap:wrap;
   }
   #pbi-ai-config input{
     flex:1;border:1px solid #fbbf24;border-radius:8px;
-    padding:6px 10px;font-size:11px;outline:none;
+    padding:6px 10px;font-size:11px;outline:none;min-width:150px;
   }
   #pbi-ai-config button{
     background:#f59e0b;border:none;border-radius:8px;
     padding:6px 12px;cursor:pointer;color:white;font-size:11px;font-weight:600;
   }
-  #pbi-ai-config-msg{font-size:10px;color:#92400e;margin-top:4px;}
+  #pbi-ai-config-msg{font-size:10px;color:#92400e;margin-top:4px;width:100%;}
 
   /* MSGS */
   #pbi-ai-msgs{
@@ -144,6 +144,13 @@
       <button id="pbi-ai-close">✕</button>
     </div>
 
+    <!-- CONFIG KEY (NOVA SEÇÃO) -->
+    <div id="pbi-ai-config" style="display:none;">
+      <input id="pbi-api-key" type="password" placeholder="sk-ant-..."/>
+      <button onclick="saveKey()">Salvar</button>
+      <div id="pbi-ai-config-msg"></div>
+    </div>
+
     <!-- MENSAGENS -->
     <div id="pbi-ai-msgs"></div>
 
@@ -171,7 +178,7 @@
 
 <script>
   // INSIRA SUA CHAVE AQUI
-  var API_KEY = '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';
+  var API_KEY = '';
 
   var chatHistory = [];
 
@@ -211,11 +218,21 @@
     document.getElementById('pbi-ai-input').addEventListener('keydown', function (e) {
       if (e.key === 'Enter') sendMsg(document.getElementById('pbi-ai-input').value);
     });
+
+    // Carregar chave do sessionStorage se existir
+    var savedKey = sessionStorage.getItem('pbi_ai_key');
+    if (savedKey) {
+      API_KEY = savedKey;
+    }
   });
 
   // ---- SALVAR CHAVE ----
   function saveKey() {
     var k = document.getElementById('pbi-api-key').value.trim();
+    if (!k) {
+      document.getElementById('pbi-ai-config-msg').textContent = '❌ Digite uma chave válida.';
+      return;
+    }
     if (!k.startsWith('sk-ant-')) {
       document.getElementById('pbi-ai-config-msg').textContent = '❌ Chave inválida. Deve começar com sk-ant-';
       return;
@@ -223,7 +240,11 @@
     API_KEY = k;
     sessionStorage.setItem('pbi_ai_key', k);
     document.getElementById('pbi-ai-config').style.display = 'none';
-    document.getElementById('pbi-ai-config-msg').textContent = '';
+    document.getElementById('pbi-api-key').value = '';
+    document.getElementById('pbi-ai-config-msg').textContent = '✅ Chave salva com sucesso!';
+    setTimeout(function() {
+      document.getElementById('pbi-ai-config-msg').textContent = '';
+    }, 2000);
   }
 
   // ---- MENSAGENS ----
@@ -256,6 +277,7 @@
 
     if (!API_KEY) {
       document.getElementById('pbi-ai-config').style.display = 'block';
+      addMsg('bot', '⚠️ Por favor, configure sua chave da API Claude primeiro.');
       return;
     }
 
@@ -271,8 +293,7 @@
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': API_KEY,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
+        'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
@@ -284,13 +305,18 @@
     .then(function (r) { return r.json(); })
     .then(function (data) {
       typing.remove();
-      var reply = data.content && data.content[0] ? data.content[0].text : 'Desculpe, não consegui responder.';
-      addMsg('bot', reply);
-      chatHistory.push({ role: 'assistant', content: reply });
+      if (data.error) {
+        addMsg('bot', '❌ Erro: ' + (data.error.message || 'Erro desconhecido'));
+      } else {
+        var reply = data.content && data.content[0] ? data.content[0].text : 'Desculpe, não consegui responder.';
+        addMsg('bot', reply);
+        chatHistory.push({ role: 'assistant', content: reply });
+      }
     })
-    .catch(function () {
+    .catch(function (err) {
       typing.remove();
-      addMsg('bot', '⚠️ Erro ao conectar com a API. Verifique sua chave.');
+      addMsg('bot', '⚠️ Erro ao conectar com a API. Verifique sua chave e tente novamente.');
+      console.error('Erro:', err);
     });
   }
 </script>
