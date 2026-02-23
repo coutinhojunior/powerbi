@@ -144,18 +144,6 @@
       <button id="pbi-ai-close">✕</button>
     </div>
 
-    <!-- CONFIG API KEY -->
-    <div id="pbi-ai-config">
-      <div style="width:100%">
-        <div style="font-size:11px;color:#92400e;margin-bottom:6px;">🔑 Insira sua chave de API Anthropic:</div>
-        <div style="display:flex;gap:8px;">
-          <input id="pbi-api-key" type="password" placeholder="sk-ant-api03-..." />
-          <button onclick="saveKey()">Salvar</button>
-        </div>
-        <div id="pbi-ai-config-msg"></div>
-      </div>
-    </div>
-
     <!-- MENSAGENS -->
     <div id="pbi-ai-msgs"></div>
 
@@ -182,8 +170,10 @@
 </div>
 
 <script>
+  // INSIRA SUA CHAVE AQUI
   var API_KEY = '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';
-  var history = [];
+
+  var chatHistory = [];
 
   var MODEL_CONTEXT = `Você é um assistente de BI especializado no painel DC - Controladoria de uma empresa de logística.
 
@@ -211,16 +201,7 @@ Responda sempre em português, de forma concisa e útil. Se perguntarem sobre DA
     'Como filtrar por empresa?'
   ];
 
-  // ---- INIT ----
   window.addEventListener('DOMContentLoaded', function () {
-    // Verificar key salva
-    var savedKey = sessionStorage.getItem('pbi_ai_key');
-    if (savedKey) {
-      API_KEY = savedKey;
-      document.getElementById('pbi-ai-config').style.display = 'none';
-    }
-
-    // Chips
     var chipsEl = document.getElementById('pbi-ai-chips');
     CHIPS.forEach(function (txt) {
       var c = document.createElement('button');
@@ -298,7 +279,7 @@ Responda sempre em português, de forma concisa e útil. Se perguntarem sobre DA
     addMsg('user', text);
     document.getElementById('pbi-ai-input').value = '';
     document.getElementById('pbi-ai-chips').style.display = 'none';
-    history.push({ role: 'user', content: text });
+    chatHistory.push({ role: 'user', content: text });
 
     var typing = showTyping();
 
@@ -314,7 +295,7 @@ Responda sempre em português, de forma concisa e útil. Se perguntarem sobre DA
         model: 'claude-sonnet-4-20250514',
         max_tokens: 600,
         system: MODEL_CONTEXT,
-        messages: history
+        messages: chatHistory
       })
     })
     .then(function (r) { return r.json(); })
@@ -322,7 +303,7 @@ Responda sempre em português, de forma concisa e útil. Se perguntarem sobre DA
       typing.remove();
       var reply = data.content && data.content[0] ? data.content[0].text : 'Desculpe, não consegui responder.';
       addMsg('bot', reply);
-      history.push({ role: 'assistant', content: reply });
+      chatHistory.push({ role: 'assistant', content: reply });
     })
     .catch(function () {
       typing.remove();
